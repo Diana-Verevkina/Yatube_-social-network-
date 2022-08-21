@@ -359,7 +359,7 @@ class FollowAuthors(TestCase):
             follow=True
         )
 
-        self.assertEqual(Follow.objects.count(), follow_count+1)
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
         self.authorized_client.post(
             reverse('posts:profile_unfollow', args=(self.post.author,)),
             follow=True
