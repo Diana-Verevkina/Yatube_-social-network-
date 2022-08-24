@@ -122,8 +122,7 @@ class StaticURLTests(TestCase):
                     self.assertRedirects(response, reverse_post_detail)
                 elif address in ('posts:profile_follow',
                                  'posts:profile_unfollow'):
-                    reverse_profile = reverse('posts:profile',
-                                                  args=arg)
+                    reverse_profile = reverse('posts:profile', args=arg)
                     self.assertRedirects(response, reverse_profile)
                 elif address != 'posts:post_delete':
                     self.assertEqual(response.status_code, HTTPStatus.OK)
