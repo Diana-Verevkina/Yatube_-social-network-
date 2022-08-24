@@ -420,7 +420,7 @@ class FollowAuthors(TestCase):
         follow_count = len(response_1.context['page_obj'])
         self.assertEqual(follow_count, 0)
 
-        follow = Follow.objects.create(
+        Follow.objects.create(
             user=self.user,
             author=self.author_user
         )
