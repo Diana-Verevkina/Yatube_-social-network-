@@ -280,7 +280,6 @@ class CacheViewsTest(TestCase):
         response_3 = self.post_author_client.post(
             reverse('posts:index'),
         )
-        cache_page(self.test_cache_index)
 
         self.assertNotEqual(response_1.content, response_3.content)
 
