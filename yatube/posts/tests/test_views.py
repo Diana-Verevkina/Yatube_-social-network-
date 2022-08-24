@@ -7,7 +7,6 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.views.decorators.cache import cache_page
 
 from ..forms import PostForm
 from ..models import Comment, Group, Post, Follow
