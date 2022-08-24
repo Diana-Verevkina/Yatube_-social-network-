@@ -1,32 +1,34 @@
 {% extends "base.html" %}
 {% block title %}Профайл пользователя {{ author.get_full_name }} {% endblock %}
-{% block header %}
-  {{ author.get_full_name }}
-
-
-{% endblock %}
 
 {% block content %}
   <div class="container py-5">
     <h1>Все посты пользователя {{ author.get_full_name }}</h1>
     <h3>Всего постов: {{ post_count }}</h3>
-  {% if following %}
-    <a style="background: indianred;"
-      class="btn btn-lg btn-light"
-      href="{% url 'posts:profile_unfollow' author.username %}" role="button"
-    >
-      Отписаться
-    </a>
-  {% else %}
-      <a
-        class="btn btn-lg btn-primary"
-        href="{% url 'posts:profile_follow' author.username %}" role="button"
-      >
-        Подписаться
-      </a>
-   {% endif %}
+    <h3>Количество подписок: {{ follower_count }}</h3>
+    <h3>Количество подписчиков: {{ following_count }}</h3>
+    {% if user.is_authenticated and user.username != author.username %}
+
+      {% if following %}
+        <a style="background: indianred;"
+           class="btn btn-lg btn-light"
+           href="{% url 'posts:profile_unfollow' author.username %}"
+           role="button"
+        >
+          Отписаться
+        </a>
+      {% else %}
+        <a
+                class="btn btn-lg btn-primary"
+                href="{% url 'posts:profile_follow' author.username %}"
+                role="button"
+        >
+          Подписаться
+        </a>
+      {% endif %}
+    {% endif %}
     {% for post in page_obj %}
-        {% include "posts/includes/post_card.html" %}
+      {% include "posts/includes/post_card.html" %}
     {% endfor %}
     {% include "posts/includes/paginator.html" %}
   </div>

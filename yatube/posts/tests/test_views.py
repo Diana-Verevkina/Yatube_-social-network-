@@ -3,6 +3,7 @@ from http import HTTPStatus
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -257,12 +258,29 @@ class CacheViewsTest(TestCase):
     def test_cache_index(self):
         """Кеширования главной страницы."""
 
-        response = self.post_author_client.post(
-            reverse('posts:post_detail', args=(self.post.id,)),
-        )
+        if Post.objects.count() > 0:
+            Post.objects.all().delete()
 
-        Post.objects.filter(id=self.post.id).delete()
-        self.assertTrue(response.context['post'])
+        post = Post.objects.create(
+            text='Кеширования главной страницы',
+            author=self.author_user,
+            group=self.group,
+        )
+        response_1 = self.post_author_client.post(
+            reverse('posts:index'),
+        )
+        post.delete()
+        response_2 = self.post_author_client.post(
+            reverse('posts:index'),
+        )
+        self.assertEqual(response_1.content, response_2.content)
+        cache.clear()
+
+        response_3 = self.post_author_client.post(
+            reverse('posts:index'),
+        )
+        cache.clear()
+        self.assertNotEqual(response_1.content, response_3.content)
 
 
 class PaginatorCheck(TestCase):
@@ -281,16 +299,26 @@ class PaginatorCheck(TestCase):
         cls.author_user = User.objects.create_user(
             username='post_author'
         )
+        cls.user = User.objects.create_user(
+            username='user'
+        )
         for post_number in range(PaginatorCheck.POSTS_COUNT):
             Post.objects.create(
                 text=f'text_{post_number}',
                 author=cls.author_user,
                 group=cls.group,
             )
+        cls.follow = Follow.objects.create(
+            user=cls.user,
+            author=cls.author_user
+        )
 
     def setUp(self):
         self.post_author_client = Client()
         self.post_author_client.force_login(self.author_user)
+
+        self.follow_user = Client()
+        self.follow_user.force_login(self.user)
 
     def test_page_contains_ten_records(self):
         """Страницы содержат правильное количество записей."""
@@ -298,6 +326,7 @@ class PaginatorCheck(TestCase):
             ('posts:index', None),
             ('posts:group_posts', (self.group.slug,)),
             ('posts:profile', (self.author_user.username,)),
+            ('posts:follow_index', None)
         }
         page_count_of_posts = (
             ('?page=1', settings.SAMPLE_SIZE),
@@ -307,7 +336,7 @@ class PaginatorCheck(TestCase):
             with self.subTest(reverse_name=reverse_name):
                 for page_number, posts_count in page_count_of_posts:
                     with self.subTest(reverse_name=reverse_name):
-                        response = self.post_author_client.get(
+                        response = self.follow_user.get(
                             reverse(reverse_name, args=arg) + page_number
                         )
                         self.assertEqual(
@@ -333,6 +362,9 @@ class FollowAuthors(TestCase):
             author=cls.author_user,
             group=cls.group,
         )
+        cls.user_follow = User.objects.create_user(
+            username='user_follow'
+        )
 
     def setUp(self):
         self.user = User.objects.create_user(username='HasNoName')
@@ -342,17 +374,14 @@ class FollowAuthors(TestCase):
         self.post_author_client = Client()
         self.post_author_client.force_login(self.author_user)
 
-    def test_authorized_client_can_follow_and_unfollow(self):
+        self.follow_user = Client()
+        self.follow_user.force_login(self.user)
+
+    def test_authorized_client_can_follow(self):
         """Авторизованный пользователь может подписываться на других
-        пользователей и удалять их из подписок."""
+        пользователей."""
+
         follow_count = Follow.objects.count()
-
-        self.client.post(
-            reverse('posts:profile_follow', args=(self.post.author,)),
-            follow=True
-        )
-
-        self.assertEqual(Follow.objects.count(), follow_count)
 
         self.authorized_client.post(
             reverse('posts:profile_follow', args=(self.post.author,)),
@@ -360,23 +389,40 @@ class FollowAuthors(TestCase):
         )
 
         self.assertEqual(Follow.objects.count(), follow_count + 1)
+        self.assertEqual(Follow.objects.first().author, self.post.author)
+        self.assertEqual(Follow.objects.first().user, self.user)
+
+    def test_authorized_client_can_unfollow(self):
+        """Авторизованный пользователь может удалять из подписок."""
+
+        Follow.objects.all().delete()
+        follow_count = Follow.objects.count()
+        Follow.objects.create(
+            user=self.user,
+            author=self.author_user
+        )
+
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+
         self.authorized_client.post(
             reverse('posts:profile_unfollow', args=(self.post.author,)),
             follow=True
         )
+        print(Follow.objects.count())
         self.assertEqual(Follow.objects.count(), follow_count)
 
     def test_new_post_for_follow_and_unfollow(self):
         """Новая запись пользователя появляется в ленте тех, кто на него
         подписан."""
-        self.authorized_client.get(reverse('posts:profile_follow',
-                                           args=(self.post.author,)))
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        follow_count = len(response.context['page_obj'])
-        self.assertEqual(follow_count, 1)
 
-        self.authorized_client.get(reverse('posts:profile_unfollow',
-                                           args=(self.post.author,)))
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        follow_count = len(response.context['page_obj'])
+        response_1 = self.authorized_client.get(reverse('posts:follow_index'))
+        follow_count = len(response_1.context['page_obj'])
         self.assertEqual(follow_count, 0)
+
+        Follow.objects.create(
+            user=self.user,
+            author=self.author_user
+        )
+        follow = Follow.objects.filter(user=self.user,
+                                       author=self.author_user).exists()
+        self.assertTrue(follow)

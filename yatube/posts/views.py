@@ -34,21 +34,25 @@ def profile(request, username):
     user_posts = selected_user.posts.select_related('group').all()
     page_obj = pages(request, user_posts)
     post_count = user_posts.count()
-    author = get_object_or_404(User, username=username)
     following = request.user.is_authenticated and Follow.objects.filter(
-        user=request.user, author=author
+        user=request.user, author=selected_user
     ).exists()
+    follower_count = selected_user.follower.count()
+    following_count = selected_user.following.count()
     context = {
         'author': selected_user,
         'post_count': post_count,
         'page_obj': page_obj,
         'following': following,
+        'follower_count': follower_count,
+        'following_count': following_count
     }
     return render(request, 'posts/profile.html', context)
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
+    post = get_object_or_404(Post.objects.prefetch_related('comments__author'),
+                             id=post_id)
     form = CommentForm(request.POST or None)
     comments = post.comments.all()
     context = {
@@ -77,7 +81,7 @@ def post_delete(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     if post.author != request.user:
         return redirect('posts:post_detail', post_id)
-    Post.objects.filter(id=post_id).delete()
+    post.delete()
     return render(request, 'posts/delete_post.html')
 
 
@@ -107,7 +111,9 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     # информация о текущем пользователе доступна в переменной request.user
-    post_list = Post.objects.filter(author__following__user=request.user)
+    post_list = Post.objects.filter(
+        author__following__user=request.user
+    ).select_related('author')
     page_obj = pages(request, post_list)
     context = {
         'page_obj': page_obj,
@@ -117,22 +123,22 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    redirect_page = redirect('posts:profile', username=username)
     author = get_object_or_404(User, username=username)
     if author == request.user:
-        return redirect_page
+        return redirect('posts:profile', username=username)
     follower = Follow.objects.filter(user=request.user, author=author)
     if follower:
-        return redirect_page
-    Follow.objects.create(user=request.user, author=author)
-    return redirect_page
+        return redirect('posts:profile', username=username)
+    Follow.objects.get_or_create(user=request.user, author=author)
+    return redirect('posts:profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
-    redirect_page = redirect('posts:profile', username=username)
     author = get_object_or_404(User, username=username)
     if author == request.user:
-        return redirect_page
-    Follow.objects.filter(user=request.user, author=author).delete()
-    return redirect_page
+        return redirect('posts:profile', username=username)
+
+    following = get_object_or_404(Follow, user=request.user, author=author)
+    following.delete()
+    return redirect('posts:profile', username=username)

@@ -38,8 +38,17 @@ class StaticURLTests(TestCase):
             ('posts:post_create', None, '/create/'),
             ('posts:post_edit', (cls.post.id,),
              f'/posts/{cls.post.id}/edit/'),
+            ('posts:add_comment', (cls.post.id,),
+             f'/posts/{cls.post.id}/comment/'),
+            ('posts:follow_index', None,
+             '/follow/'),
+            ('posts:profile_follow', (cls.author_user.username,),
+             f'/profile/{cls.author_user.username}/follow/'),
+            ('posts:profile_unfollow', (cls.author_user.username,),
+             f'/profile/{cls.author_user.username}/unfollow/'),
             ('posts:post_delete', (cls.post.id,),
              f'/posts/{cls.post.id}/delete/'),
+
         )
 
     def setUp(self):
@@ -66,6 +75,7 @@ class StaticURLTests(TestCase):
             ('posts:post_create', None, 'posts/create_post.html'),
             ('posts:post_edit', (self.post.id,), 'posts/create_post.html'),
             ('posts:post_detail', (self.post.id,), 'posts/post.html'),
+            ('posts:follow_index', None, 'posts/follow.html'),
             ('posts:post_delete', (self.post.id,), 'posts/delete_post.html'),
         )
         for address, arg, template in url_templates_names:
@@ -90,7 +100,9 @@ class StaticURLTests(TestCase):
                 reverse_name = reverse(address, args=arg)
                 response = self.client.get(reverse(address, args=arg))
                 if address in ('posts:post_edit', 'posts:post_create',
-                               'posts:post_delete'):
+                               'posts:post_delete', 'posts:add_comment',
+                               'posts:follow_index', 'posts:profile_follow',
+                               'posts:profile_unfollow'):
                     self.assertRedirects(
                         response, f'{reverse_login}?next={reverse_name}'
                     )
@@ -104,10 +116,15 @@ class StaticURLTests(TestCase):
                 response = self.authorized_client.get(
                     reverse(address, args=arg)
                 )
-                if address == 'posts:post_edit':
+                if address in ('posts:post_edit', 'posts:add_comment'):
                     reverse_post_detail = reverse('posts:post_detail',
                                                   args=arg)
                     self.assertRedirects(response, reverse_post_detail)
+                elif address in ('posts:profile_follow',
+                                 'posts:profile_unfollow'):
+                    reverse_profile = reverse('posts:profile',
+                                                  args=arg)
+                    self.assertRedirects(response, reverse_profile)
                 elif address != 'posts:post_delete':
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
@@ -118,4 +135,7 @@ class StaticURLTests(TestCase):
                 response = self.post_author_client.get(
                     reverse(address, args=arg)
                 )
-                self.assertEqual(response.status_code, HTTPStatus.OK)
+                if address not in ('posts:add_comment',
+                                   'posts:profile_follow',
+                                   'posts:profile_unfollow'):
+                    self.assertEqual(response.status_code, HTTPStatus.OK)

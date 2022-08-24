@@ -61,8 +61,15 @@ class Comment(CreatedModel):
     """created = models.DateTimeField(verbose_name='Дата публикации комментария',
                                    auto_now_add=True)"""
 
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
 
-class Follow(CreatedModel):
+    def __str__(self):
+        return self.text[:15]
+
+
+class Follow(models.Model):
     user = models.ForeignKey(User, verbose_name='Пользователь',
                              on_delete=models.CASCADE, blank=True,
                              null=True, related_name='follower',
@@ -73,3 +80,10 @@ class Follow(CreatedModel):
                                null=True, related_name='following',
                                help_text='Ссылка на объект пользователя, '
                                          'на которого подписываются')
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return self.author.username
