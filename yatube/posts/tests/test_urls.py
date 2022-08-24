@@ -134,7 +134,12 @@ class StaticURLTests(TestCase):
                 response = self.post_author_client.get(
                     reverse(address, args=arg)
                 )
-                if address not in ('posts:add_comment',
-                                   'posts:profile_follow',
-                                   'posts:profile_unfollow'):
+                if address in ('posts:profile_follow',
+                               'posts:profile_unfollow'):
+                    self.assertRedirects(response, reverse('posts:profile',
+                                                           args=arg))
+                elif address == 'posts:add_comment':
+                    self.assertRedirects(response, reverse('posts:post_detail',
+                                                           args=arg))
+                else:
                     self.assertEqual(response.status_code, HTTPStatus.OK)

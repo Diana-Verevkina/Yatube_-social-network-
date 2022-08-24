@@ -37,15 +37,11 @@ def profile(request, username):
     following = request.user.is_authenticated and Follow.objects.filter(
         user=request.user, author=selected_user
     ).exists()
-    follower_count = selected_user.follower.count()
-    following_count = selected_user.following.count()
     context = {
         'author': selected_user,
         'post_count': post_count,
         'page_obj': page_obj,
         'following': following,
-        'follower_count': follower_count,
-        'following_count': following_count
     }
     return render(request, 'posts/profile.html', context)
 
@@ -54,11 +50,10 @@ def post_detail(request, post_id):
     post = get_object_or_404(Post.objects.prefetch_related('comments__author'),
                              id=post_id)
     form = CommentForm(request.POST or None)
-    comments = post.comments.all()
     context = {
         'post': post,
         'form': form,
-        'comments': comments,
+        'comments': post.comments.all(),
     }
     return render(request, 'posts/post.html', context)
 
@@ -124,21 +119,14 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    if author == request.user:
-        return redirect('posts:profile', username=username)
-    follower = Follow.objects.filter(user=request.user, author=author)
-    if follower:
-        return redirect('posts:profile', username=username)
-    Follow.objects.get_or_create(user=request.user, author=author)
+    if author != request.user:
+        Follow.objects.get_or_create(user=request.user, author=author)
     return redirect('posts:profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
-    author = get_object_or_404(User, username=username)
-    if author == request.user:
-        return redirect('posts:profile', username=username)
-
-    following = get_object_or_404(Follow, user=request.user, author=author)
-    following.delete()
+    Follow.objects.filter(
+        user=request.user, author__username=username
+    ).delete()
     return redirect('posts:profile', username=username)

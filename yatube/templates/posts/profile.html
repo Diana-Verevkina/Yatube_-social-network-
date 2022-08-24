@@ -5,9 +5,9 @@
   <div class="container py-5">
     <h1>Все посты пользователя {{ author.get_full_name }}</h1>
     <h3>Всего постов: {{ post_count }}</h3>
-    <h3>Количество подписок: {{ follower_count }}</h3>
-    <h3>Количество подписчиков: {{ following_count }}</h3>
-    {% if user.is_authenticated and user.username != author.username %}
+    <h3>Количество подписок: {{ author.follower.count }}</h3>
+    <h3>Количество подписчиков: {{ author.following.count }}</h3>
+    {% if user.is_authenticated and user != author %}
 
       {% if following %}
         <a style="background: indianred;"

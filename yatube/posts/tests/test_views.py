@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.views.decorators.cache import cache_page
 
 from ..forms import PostForm
 from ..models import Comment, Group, Post, Follow
@@ -279,7 +280,8 @@ class CacheViewsTest(TestCase):
         response_3 = self.post_author_client.post(
             reverse('posts:index'),
         )
-        cache.clear()
+        cache_page(self.test_cache_index)
+
         self.assertNotEqual(response_1.content, response_3.content)
 
 
@@ -408,7 +410,6 @@ class FollowAuthors(TestCase):
             reverse('posts:profile_unfollow', args=(self.post.author,)),
             follow=True
         )
-        print(Follow.objects.count())
         self.assertEqual(Follow.objects.count(), follow_count)
 
     def test_new_post_for_follow_and_unfollow(self):
@@ -419,10 +420,9 @@ class FollowAuthors(TestCase):
         follow_count = len(response_1.context['page_obj'])
         self.assertEqual(follow_count, 0)
 
-        Follow.objects.create(
+        follow = Follow.objects.create(
             user=self.user,
             author=self.author_user
         )
-        follow = Follow.objects.filter(user=self.user,
-                                       author=self.author_user).exists()
-        self.assertTrue(follow)
+        response_2 = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertEqual(len(response_2.context['page_obj']), 1)
