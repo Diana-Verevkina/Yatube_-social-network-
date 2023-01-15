@@ -1,9 +1,8 @@
 # Социальная сеть Yatube
 hw05_final
 
-![img_5.png](img_5.png)
+ <img src="img_5.png" style="height: 120pt">
 
-![img_6.png](img_6.png)
 ## Технологии 
 Python, Django, Git, HTML, CSS, SQLite, PostgreSQL, pytest, Docker, NginX, Яндекс.Облако, Gunicorn, Linux, Bootstrap, WSGI
 
