@@ -1,3 +1,7 @@
-# hw05_final
+# Социальная сеть Yatube
+hw05_final
 
-[![CI](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml)
+![img_5.png](img_5.png)
+## Технологии 
+Python, Django, Git, HTML, CSS, SQLite, PostgreSQL, pytest, Docker, NginX, Яндекс.Облако, Gunicorn, Linux, Bootstrap, WSGI
+
